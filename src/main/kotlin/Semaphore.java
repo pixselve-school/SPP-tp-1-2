@@ -1,33 +1,39 @@
 public class Semaphore implements SemaphoreInterface {
     private int permits;
+    private int waitingThreads;
 
     public Semaphore() {
-        permits = 0;
+        this.permits = 0;
+        this.waitingThreads = 0;
     }
 
-    @Override
     public synchronized void up() {
         permits++;
-        notify();
+        if (waitingThreads > 0) {
+            this.notify();
+        }
     }
 
-    @Override
     public synchronized void down() {
         while (permits == 0) {
             try {
-                wait();
+                waitingThreads++;
+                this.wait();
+                waitingThreads--;
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // Handle the exception or rethrow it as needed
+                Thread.currentThread().interrupt();
             }
         }
         permits--;
     }
 
-    @Override
     public synchronized int releaseAll() {
-        int released = permits;
-        permits = 0;
-        notifyAll();
-        return released;
+        int unblockedThreads = waitingThreads;
+        if (waitingThreads > 0) {
+            permits = waitingThreads;
+            this.notifyAll();
+        }
+        return unblockedThreads;
     }
 }
