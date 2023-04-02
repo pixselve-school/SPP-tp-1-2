@@ -1,15 +1,16 @@
 public class Semaphore implements SemaphoreInterface {
     private int permits;
-    private int waitingThreads;
+    private int blockedThreads;
 
     public Semaphore() {
         this.permits = 0;
-        this.waitingThreads = 0;
+        this.blockedThreads = 0;
     }
 
     public synchronized void up() {
         permits++;
-        if (waitingThreads > 0) {
+        if (blockedThreads > 0) {
+            blockedThreads--;
             this.notify();
         }
     }
@@ -17,9 +18,8 @@ public class Semaphore implements SemaphoreInterface {
     public synchronized void down() {
         while (permits == 0) {
             try {
-                waitingThreads++;
+                blockedThreads++;
                 this.wait();
-                waitingThreads--;
             } catch (InterruptedException e) {
                 // Handle the exception or rethrow it as needed
                 Thread.currentThread().interrupt();
@@ -29,11 +29,11 @@ public class Semaphore implements SemaphoreInterface {
     }
 
     public synchronized int releaseAll() {
-        int unblockedThreads = waitingThreads;
-        if (waitingThreads > 0) {
-            permits = waitingThreads;
-            this.notifyAll();
-        }
-        return unblockedThreads;
+        int blockedThreads = this.blockedThreads;
+        this.blockedThreads = 0;
+        this.permits += blockedThreads;
+        this.notifyAll();
+
+        return blockedThreads;
     }
 }
